@@ -19,6 +19,7 @@ public class MindCheckService {
     private final SuggestionEngine suggestionEngine;
     private final EmotionTimeline<JournalEntry> timeline;
     private final WeeklyReportGenerator reportGenerator;
+    private final MoodCalendar moodCalendar;
     private final StreakTracker streakTracker;
     private final AnomalyDetector anomalyDetector;
     private final ProfileManager profileManager;
@@ -33,15 +34,16 @@ public class MindCheckService {
             repo = new InMemoryEntryRepository();
             System.out.println("  ℹ️  Using in-memory storage (SQLite driver not found)");
         }
-        this.repository      = repo;
-        this.classifier      = new EmotionClassifier();
+        this.repository = repo;
+        this.classifier = new EmotionClassifier();
         this.suggestionEngine = new SuggestionEngine();
-        this.timeline        = new EmotionTimeline<>();
+        this.timeline = new EmotionTimeline<>();
         this.reportGenerator = new WeeklyReportGenerator();
-        this.profileManager  = ProfileManager.getInstance();
+        this.moodCalendar = new MoodCalendar();
+        this.profileManager = ProfileManager.getInstance();
 
         // Set up observers
-        this.streakTracker   = new StreakTracker();
+        this.streakTracker = new StreakTracker();
         this.anomalyDetector = new AnomalyDetector();
         timeline.addObserver(streakTracker);
         timeline.addObserver(anomalyDetector);
@@ -55,7 +57,8 @@ public class MindCheckService {
         Collections.reverse(existing);
         for (JournalEntry e : existing) {
             timeline.addEntry(e);
-            if (e.getEmotionResult() != null) profileManager.recordEmotion(e.getEmotionResult());
+            if (e.getEmotionResult() != null)
+                profileManager.recordEmotion(e.getEmotionResult());
         }
     }
 
@@ -102,11 +105,29 @@ public class MindCheckService {
         return reportGenerator.generateMoodGraph(timeline);
     }
 
-    public List<JournalEntry> getAllEntries()       { return repository.findAll(); }
-    public List<JournalEntry> getRecentEntries(int n){ return repository.findRecent(n); }
-    public int getTotalEntries()                    { return repository.count(); }
-    public ProfileManager getProfileManager()       { return profileManager; }
-    public StreakTracker getStreakTracker()          { return streakTracker; }
+    public String getMoodCalendar() {
+        return moodCalendar.generateCalendar(timeline);
+    }
+
+    public List<JournalEntry> getAllEntries() {
+        return repository.findAll();
+    }
+
+    public List<JournalEntry> getRecentEntries(int n) {
+        return repository.findRecent(n);
+    }
+
+    public int getTotalEntries() {
+        return repository.count();
+    }
+
+    public ProfileManager getProfileManager() {
+        return profileManager;
+    }
+
+    public StreakTracker getStreakTracker() {
+        return streakTracker;
+    }
 
     // ---- Inner result class ----
     public static class AnalysisResult {
@@ -118,14 +139,14 @@ public class MindCheckService {
         public final String milestoneMesage;
 
         public AnalysisResult(JournalEntry entry, EmotionResult emotionResult,
-                              ProcessedText processedText,
-                              Map<String, List<String>> suggestions,
-                              List<String> anomalies, String milestone) {
-            this.entry          = entry;
-            this.emotionResult  = emotionResult;
-            this.processedText  = processedText;
-            this.suggestions    = suggestions;
-            this.anomalies      = anomalies;
+                ProcessedText processedText,
+                Map<String, List<String>> suggestions,
+                List<String> anomalies, String milestone) {
+            this.entry = entry;
+            this.emotionResult = emotionResult;
+            this.processedText = processedText;
+            this.suggestions = suggestions;
+            this.anomalies = anomalies;
             this.milestoneMesage = milestone;
         }
     }
